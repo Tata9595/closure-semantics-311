@@ -118,7 +118,7 @@ def run_placeholder():
     """, "M4_threshold_options.csv")
 
     print("\n↑ 选阈值的原则：**剔除比例要小（建议 < 1%），但要能覆盖明显异常的组。**")
-    print("   把选定的阈值和理由写进论文 §4.2.4，审稿人会问。")
+    print("   把选定的阈值和理由写进the paper，")
 
     print("\n" + "═" * 66)
     print("第 3 步：按 EXCLUDE_RULES 排除后，与排除前对比")

@@ -299,7 +299,7 @@ def finish(results, t_start):
         con.execute("INSERT INTO rho_table VALUES (?,?,?,?,?,?,?)", list(r))
 
     print("\n" + "═" * 64)
-    print("表 12：各稳健性设定下的 Spearman ρ  ← 论文 §6.4 核心")
+    print("表 12：各稳健性设定下的 Spearman ρ  ← the paper 核心")
     print("═" * 64)
 
     show("按类型（样本量大，以此为主）",

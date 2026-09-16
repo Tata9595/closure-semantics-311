@@ -1,27 +1,10 @@
-"""
-步骤 2：字段完整率统计 + 30 天复发率计算（无 pandas 依赖版）
-
-用法：
-    pip install duckdb --break-system-packages
-    python step2_analyze.py
-
-输出：
-  屏幕打印全部结果
-  同时把关键表写入 out/ 目录的 CSV，方便发给我看
-
-判读标准：
-  BBL 完整率 > 80%    → §4.1 走分支 A
-  复发率落在 5%–20%   → 选题落地
-  复发率 ≈ 0 或 ≈ 100% → 识别方法要改，看第 6 节诊断输出
-"""
-
 import os
 import duckdb
 
 RAW         = "data/raw/*.parquet"
 WINDOW_DAYS = 30
 OUT         = "out"
-MEM_LIMIT   = "6GB"      # 按你的内存调整，8GB 机器建议 5GB
+MEM_LIMIT   = "6GB"      # adjust to available RAM
 THREADS     = 4
 
 os.makedirs(OUT, exist_ok=True)
@@ -31,7 +14,7 @@ con.execute(f"PRAGMA threads={THREADS}")
 
 
 def show(title, sql, csv=None):
-    """打印结果表；给了 csv 名就同时落盘"""
+    """Print a result table; also write it to CSV when a filename is given."""
     print(f"\n{title}")
     con.sql(sql).show(max_rows=40)
     if csv:
@@ -39,9 +22,9 @@ def show(title, sql, csv=None):
 
 
 # ═════════════════════════════════════════════
-# 1. 规范化视图
+# 1. Normalised base table
 # ═════════════════════════════════════════════
-print("正在建规范化表，首次运行需要几分钟…")
+print("Building the normalised table; the first run takes a few minutes...")
 con.execute(f"""
 CREATE OR REPLACE TABLE base AS
 SELECT
@@ -56,7 +39,7 @@ SELECT
     NULLIF(TRIM(bbl), '')                   AS bbl,
     TRY_CAST(latitude  AS DOUBLE)           AS lat,
     TRY_CAST(longitude AS DOUBLE)           AS lon,
-    -- 地址标准化：大写、压空格、统一常见后缀
+    -- Address normalisation: upper case, collapse whitespace, standardise suffixes
     NULLIF(
       regexp_replace(
         regexp_replace(
@@ -68,16 +51,16 @@ FROM read_parquet('{RAW}');
 """)
 
 n_total = con.execute("SELECT count(*) FROM base").fetchone()[0]
-print(f"原始工单数：{n_total:,}")
+print(f"Raw tickets: {n_total:,}")
 
 # ═════════════════════════════════════════════
-# 2. A组：位置字段完整率 ← 决定 A/B 分支
+# 2. Completeness of the three candidate location fields
 # ═════════════════════════════════════════════
 print("\n" + "═" * 60)
-print("A. 位置字段完整率")
+print("A. Location field completeness")
 print("═" * 60)
 
-show("完整率", f"""
+show("Completeness", f"""
 SELECT
   round(100.0*count(bbl)/{n_total}, 2)                          AS bbl_pct,
   round(100.0*count(addr_norm)/{n_total}, 2)                    AS addr_pct,
@@ -89,14 +72,14 @@ SELECT
 FROM base
 """, "A1_completeness.csv")
 
-show("唯一位置数（判断标准化是否过度合并）", """
+show("Distinct locations (checks that normalisation did not over-merge)", """
 SELECT count(DISTINCT bbl)       AS uniq_bbl,
        count(DISTINCT addr_norm) AS uniq_addr
 FROM base
 """, "A2_unique_locations.csv")
 
 # ═════════════════════════════════════════════
-# 3. 分析表：位置主键
+# 3. Analysis table with the location key
 # ═════════════════════════════════════════════
 con.execute("""
 CREATE OR REPLACE TABLE t AS
@@ -111,13 +94,13 @@ WHERE created_date IS NOT NULL AND complaint_type IS NOT NULL;
 """)
 
 # ═════════════════════════════════════════════
-# 4. B组：数据概况
+# 4. Dataset overview
 # ═════════════════════════════════════════════
 print("\n" + "═" * 60)
-print("B. 数据概况")
+print("B. Dataset overview")
 print("═" * 60)
 
-show("概况", """
+show("Overview", """
 SELECT count(*)                                    AS tickets,
        count(DISTINCT agency)                      AS agencies,
        count(DISTINCT complaint_type)              AS types,
@@ -128,7 +111,7 @@ FROM t
 """, "B1_overview.csv")
 
 # ═════════════════════════════════════════════
-# 5. C组：30 天复发率 ← 核心变量
+# 5. Raw 30-day recurrence
 # ═════════════════════════════════════════════
 def recur_sql(loc, extra_group=""):
     g = f", c.{extra_group}" if extra_group else ""
@@ -154,27 +137,27 @@ def recur_sql(loc, extra_group=""):
 
 
 print("\n" + "═" * 60)
-print(f"C. {WINDOW_DAYS} 天复发率  ← 核心变量")
+print(f"C. Raw {WINDOW_DAYS}-day recurrence")
 print("═" * 60)
 
-show("分支 A：BBL / 标准化地址", recur_sql("loc_a") + """
+show("Key A: tax lot, falling back to normalised address", recur_sql("loc_a") + """
 SELECT count(*) AS closed_tickets, sum(recurred) AS recurred,
        round(100.0*avg(recurred), 2) AS recur_rate_pct FROM flagged
 """, "C1_recur_branchA.csv")
 
-show("分支 B：100 米网格", recur_sql("loc_b") + """
+show("Key B: 100 m grid (robustness comparison)", recur_sql("loc_b") + """
 SELECT count(*) AS closed_tickets, sum(recurred) AS recurred,
        round(100.0*avg(recurred), 2) AS recur_rate_pct FROM flagged
 """, "C2_recur_branchB.csv")
 
 # ═════════════════════════════════════════════
-# 6. 按部门分解（论文 §6.2 预览）
+# 6. Breakdown by responsible agency
 # ═════════════════════════════════════════════
 print("\n" + "═" * 60)
-print("D. 按责任部门的复发率（分支 A，工单数 ≥ 5000）")
+print("D. Recurrence by agency (key A, groups of 5000+ tickets)")
 print("═" * 60)
 
-show("部门分解", recur_sql("loc_a", "agency") + """
+show("By agency", recur_sql("loc_a", "agency") + """
 SELECT agency, count(*) AS tickets,
        round(100.0*avg(recurred), 2) AS recur_rate_pct
 FROM flagged GROUP BY agency HAVING count(*) >= 5000
@@ -182,10 +165,10 @@ ORDER BY recur_rate_pct DESC
 """, "D1_by_agency.csv")
 
 print("\n" + "═" * 60)
-print("E. 按工单类型的复发率（前 20，工单数 ≥ 5000）")
+print("E. Recurrence by complaint type (top 20, 5000+ tickets)")
 print("═" * 60)
 
-show("类型分解", recur_sql("loc_a", "complaint_type") + """
+show("By complaint type", recur_sql("loc_a", "complaint_type") + """
 SELECT complaint_type, count(*) AS tickets,
        round(100.0*avg(recurred), 2) AS recur_rate_pct
 FROM flagged GROUP BY complaint_type HAVING count(*) >= 5000
@@ -193,13 +176,13 @@ ORDER BY recur_rate_pct DESC LIMIT 20
 """, "E1_by_type.csv")
 
 # ═════════════════════════════════════════════
-# 7. 诊断
+# 7. Diagnostics
 # ═════════════════════════════════════════════
 print("\n" + "═" * 60)
-print("F. 诊断：单个「位置+类型」组的工单数分布")
+print("F. Diagnostic: distribution of location-type group sizes")
 print("═" * 60)
 
-show("组大小分位数", """
+show("Group-size quantiles", """
 SELECT quantile_cont(cnt, 0.50) AS p50,
        quantile_cont(cnt, 0.90) AS p90,
        quantile_cont(cnt, 0.99) AS p99,
@@ -208,15 +191,15 @@ FROM (SELECT loc_a, complaint_type, count(*) AS cnt
       FROM t WHERE loc_a IS NOT NULL GROUP BY 1,2)
 """, "F1_group_sizes.csv")
 
-print("↑ max_group 若达数万，说明存在超大聚合位置（公园/地铁站等），")
-print("  会人为抬高复发率，需在论文 §6.6 作为失效案例报告。")
+print("If max_group reaches tens of thousands, an over-aggregated location")
+print("(a park, a transit hub, or a geocoding default) is inflating recurrence.")
 
-# 结案原因的粗分类 —— 论文 §4.2 的补充证据
+# Frequency of resolution descriptions, the input to step4_classify.py
 print("\n" + "═" * 60)
-print("G. 最常见的结案说明（前 15）")
+print("G. Most frequent resolution descriptions (top 15)")
 print("═" * 60)
 
-show("结案说明分布", """
+show("Resolution description frequency", """
 SELECT left(resolution_description, 90) AS resolution_snippet,
        count(*) AS n,
        round(100.0*count(*)/(SELECT count(*) FROM t WHERE closed_date IS NOT NULL), 2) AS pct
@@ -224,8 +207,8 @@ FROM t WHERE closed_date IS NOT NULL AND resolution_description IS NOT NULL
 GROUP BY 1 ORDER BY n DESC LIMIT 15
 """, "G1_resolutions.csv")
 
-print("↑ 注意「不归本部门管辖」「现场未发现问题」这类非解决型结案的占比，")
-print("  可作为实质解决率之外的佐证维度写进论文。")
+print("Note the share of non-resolving closures such as \"not within our")
+print("jurisdiction\" or \"no evidence observed\"; step4 classifies these.")
 
 con.close()
-print(f"\n完成。CSV 已写入 {OUT}/ ，数据库存为 nyc311.duckdb")
+print(f"\nDone. CSV written to {OUT}/ ; database saved as nyc311.duckdb")

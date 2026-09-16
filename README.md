@@ -92,6 +92,15 @@ Run in order. Times are approximate on the hardware above.
 | `peek.py` | Show the full text of a resolution template and its variants — used during annotation when a truncated prefix is ambiguous |
 | `check_addr.py` | Diurnal and monthly distribution of a given address, plus comparison against the citywide pattern for the same complaint type — used to diagnose the placeholder address |
 
+
+### A note on the code comments
+
+Module documentation, usage instructions and all output shown to the user
+are in English. Some inline comments within the scripts remain in Chinese,
+the language in which the analysis was developed. They explain
+implementation details rather than method, and every decision that bears on
+the results is documented in English here and in the paper.
+
 ---
 
 ## Annotation
@@ -213,7 +222,7 @@ These are stated in the paper and repeated here so that anyone reusing the code 
 @inproceedings{closure-semantics-2026,
   title     = {Which Kind of Non-Resolution Predicts Recurrence?
                Decomposing Closure Semantics in Large-Scale Urban Service Requests},
-  author    = {GU JUNJIE},
+  author    = {GU JUNJIE},			   
   booktitle = {Proceedings of the 10th International Conference on
                Computer Science and Artificial Intelligence (CSAI)},
   year      = {2026},

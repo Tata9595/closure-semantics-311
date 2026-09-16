@@ -145,7 +145,7 @@ def run_mid():
     for r in rows:
         con.execute("INSERT INTO rho7 VALUES (?,?,?,?,?,?)", list(r))
 
-    show(con, "论文 §6.5 表 10：三种口径的相关系数汇总", """
+    show(con, "the paper 表 10：三种口径的相关系数汇总", """
     SELECT nr_scope, count(*) AS settings,
            round(min(rho),4) AS rho_min, round(max(rho),4) AS rho_max,
            round(avg(rho),4) AS rho_mean
@@ -167,7 +167,7 @@ def run_mid():
     """, "L4_scope_shares.csv")
 
     print("\n" + "─" * 64)
-    print("判读（关系到论文 §6.4.3 那处理论与数据的矛盾）：")
+    print("判读（关系到the paper.3 那处理论与数据的矛盾）：")
     print("  中间口径 ρ 接近窄口径  → 结论对 D 的取舍不敏感，软肋补上")
     print("  中间口径 ρ 明显低于窄口径 → D 确实在稀释，需在正文解释")
     print("  中间口径 ρ 高于窄口径  → 说明不该剔除 D，窄口径定义要改")
@@ -274,7 +274,7 @@ def run_kappa():
     """).fetchone()[0]
 
     print("═" * 64)
-    print("论文 §4.1.4：标注一致性检验")
+    print("the paper 4.1.4：标注一致性检验")
     print("═" * 64)
     print(f"  配对样本量 n            = {n}")
     print(f"  观察一致率 Po           = {po:.4f}  ({100*po:.2f}%)")
@@ -316,7 +316,7 @@ def run_kappa():
     """, "L7_disagreements.csv")
 
     print("\n↑ 逐条看分歧。若集中在某两类之间（如 B 与 D），说明该边界定义需要写得更清楚，")
-    print("  并在论文 §3.2 补充判据。这段讨论本身就是方法学贡献。")
+    print("  并在the paper 3.2 补充判据。这段讨论本身就是方法学贡献。")
     con.close()
 
 

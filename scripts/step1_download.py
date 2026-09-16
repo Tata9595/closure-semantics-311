@@ -63,7 +63,7 @@ def ts(d: dt.date) -> str:
 
 # ═══════════════ 单窗口请求（无 $order / 无 $offset） ═══════════════
 def fetch_window(lo: dt.date, hi: dt.date, timeout=TIMEOUT, verbose=False):
-    
+    """取 [lo, hi) 区间的全部工单。窗口足够小则一次取完。"""
     params = {
         "$select": ",".join(FIELDS),
         "$where": f"created_date >= '{ts(lo)}' AND created_date < '{ts(hi)}'",
@@ -90,7 +90,10 @@ def fetch_window(lo: dt.date, hi: dt.date, timeout=TIMEOUT, verbose=False):
 
 
 def fetch_window_safe(lo: dt.date, hi: dt.date, depth=0):
-   
+    """
+    取 [lo, hi)。若返回行数触顶（说明被截断），把窗口二分后递归重取，
+    保证不会静默丢数据。
+    """
     df = fetch_window(lo, hi)
 
     if df.height >= ROW_LIMIT:
@@ -167,7 +170,7 @@ def speed():
 
 # ═══════════════ 正式下载 ═══════════════
 def month_bounds(d: dt.date):
-    
+    """返回 d 所在月的 [首日, 次月首日)"""
     first = d.replace(day=1)
     nxt = dt.date(first.year + 1, 1, 1) if first.month == 12 \
         else dt.date(first.year, first.month + 1, 1)

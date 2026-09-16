@@ -396,7 +396,7 @@ def apply_labels():
     ORDER BY nr_pct DESC LIMIT 25
     """, "I7_nr_by_type.csv")
 
-    # ── 交叉验证（论文 §6.4，图 3）──
+    # ── 交叉验证（the paper，图 3）──
     tables = [r[0] for r in con.execute("SHOW TABLES").fetchall()]
     if "excess" not in tables:
         print("\n⚠️ 库里没有 excess 表，请先运行 step3_diagnose.py，再重跑 --apply")
@@ -524,7 +524,7 @@ def gaps():
     print("\n↑ 逐条看 template，能判的填进标注表的 code 列。")
     print("  若前 250 字符仍未分叉，用 peek.py 查完整文本：")
     print('      python peek.py "模板里的几个词" --tail 200')
-    print("  确实无法判定的才保留 X，并在论文 §4.1 报告其占比。")
+    print("  确实无法判定的才保留 X，并在the paper 4.1 报告其占比。")
     con.close()
 
 
