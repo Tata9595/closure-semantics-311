@@ -1,19 +1,3 @@
-"""
-步骤 7：补齐 V0.7 的三项待办
-
-  ① --mid     补算中间口径（仅剔除 G）的相关系数  → 论文 §6.5 表 10
-  ② --sheet   生成盲标表，交第二名标注者独立标注   → 论文 §4.1.4 前置
-  ③ --kappa   读回第二份标注，算一致率与 Cohen's kappa → 论文 §4.1.4
-
-前置：step4 --apply、step5、step6 均已运行过
-
-用法：
-    python step7_finalize.py --mid
-    python step7_finalize.py --sheet
-    （把 out/L1_kappa_sheet.csv 发给第二个人标注，填 code2 列后放回原处）
-    python step7_finalize.py --kappa
-"""
-
 import os
 import math
 import argparse

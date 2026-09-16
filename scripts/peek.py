@@ -1,23 +1,3 @@
-"""
-小工具：查看结案说明的完整文本与各变体分布
-
-标注时遇到前缀被截断、看不出语义走向的模板，用这个查完整版。
-按**完整文本**分组，因此结尾不同的变体不会被合并。
-
-用法：
-    python peek.py "contacted a tenant"              # 默认显示头 200 + 尾 200 字符
-    python peek.py "contacted a tenant" --full       # 显示完整全文，不截断
-    python peek.py "contacted a tenant" --tail 150   # 只看结尾 150 字符（语义差别通常在这里）
-    python peek.py "unable to gain" --top 20         # 多列几个变体
-
-参数：
-    pattern    要搜索的文本片段（开头或中间任意一段）
-    --full     完整显示，不截断
-    --head N   显示开头 N 字符（默认 200）
-    --tail N   显示结尾 N 字符（默认 200）
-    --top N    最多列出几个变体（默认 10）
-"""
-
 import argparse
 import duckdb
 

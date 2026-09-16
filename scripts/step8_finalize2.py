@@ -1,18 +1,3 @@
-"""
-步骤 8：占位地址查证与散点图
-
-  ① --placeholder   占位地址诊断 → 排除规则 → 排除前后结果对比（论文 §4.2.4、§6.6）
-  ② --scatter       三种口径的散点图数据 + 直接出图（论文 图 2）
-  ③ --gaps2         各部门未归类模板清单，按部门分组（辅助补标）
-
-前置：step2/3/4/5 均已运行过
-
-用法：
-    python step8_finalize2.py --placeholder
-    python step8_finalize2.py --scatter
-    python step8_finalize2.py --gaps2
-"""
-
 import os
 import math
 import argparse

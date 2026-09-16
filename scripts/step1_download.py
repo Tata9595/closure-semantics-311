@@ -1,33 +1,3 @@
-"""
-步骤 1（按天切片版）：下载 NYC 311 工单数据（2023–2025），逐月保存为 Parquet
-
-数据集：311 Service Requests from 2010 to Present  (erm2-nwe9)
-端点：GET https://data.cityofnewyork.us/resource/erm2-nwe9.csv
-
-═══════════════ 为什么不用 $order + $offset ═══════════════
-速度实测（--speed）表明，这个数据集上 $order 本身就是瓶颈：
-    不带 $order，取 5 行 ……………………  2.7 秒
-    带 $order=:id，取 5 行 ……………… 24.4 秒
-    带 $order=:id，取 1000 行 …………  超时
-    带 $order=unique_key，取 5 行 …… 95.7 秒
-
-而翻页之所以需要 $order，是为了保证 offset 稳定。
-如果把时间窗口切到「一天」，单日约 8000 单，一次请求就能取完，
-那么既不需要 $order 也不需要 $offset —— 瓶颈直接消失。
-
-本脚本因此按天请求，按月落盘。单请求约 3 秒，三年约一小时。
-════════════════════════════════════════════════════════
-
-用法（PowerShell）：
-    $env:NYC_APP_TOKEN="你的token"
-    python step1_download.py --probe      # ① 自检：确认字段名
-    python step1_download.py              # ② 正式下载
-
-用法（cmd）：
-    set NYC_APP_TOKEN=你的token
-    python step1_download.py
-"""
-
 import os
 import io
 import time
@@ -93,7 +63,7 @@ def ts(d: dt.date) -> str:
 
 # ═══════════════ 单窗口请求（无 $order / 无 $offset） ═══════════════
 def fetch_window(lo: dt.date, hi: dt.date, timeout=TIMEOUT, verbose=False):
-    """取 [lo, hi) 区间的全部工单。窗口足够小则一次取完。"""
+    
     params = {
         "$select": ",".join(FIELDS),
         "$where": f"created_date >= '{ts(lo)}' AND created_date < '{ts(hi)}'",
@@ -120,10 +90,7 @@ def fetch_window(lo: dt.date, hi: dt.date, timeout=TIMEOUT, verbose=False):
 
 
 def fetch_window_safe(lo: dt.date, hi: dt.date, depth=0):
-    """
-    取 [lo, hi)。若返回行数触顶（说明被截断），把窗口二分后递归重取，
-    保证不会静默丢数据。
-    """
+   
     df = fetch_window(lo, hi)
 
     if df.height >= ROW_LIMIT:
@@ -200,7 +167,7 @@ def speed():
 
 # ═══════════════ 正式下载 ═══════════════
 def month_bounds(d: dt.date):
-    """返回 d 所在月的 [首日, 次月首日)"""
+    
     first = d.replace(day=1)
     nxt = dt.date(first.year + 1, 1, 1) if first.month == 12 \
         else dt.date(first.year, first.month + 1, 1)

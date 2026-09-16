@@ -1,24 +1,3 @@
-"""
-make_figures.py — 一次生成论文的全部图
-
-输入：out/ 目录下由 step3–step8 产出的 CSV
-输出：out/fig/ 下的 PNG（300 dpi，英文标注，可直接投稿）
-
-用法：
-    pip install matplotlib pandas --break-system-packages
-    python make_figures.py
-
-生成：
-    fig1_recurrence_vs_groupsize.png   复发率 vs 组大小（对数横轴）
-    fig2_scatter_scopes.png            三种口径 vs 超额复发 散点
-    fig3_rho_by_window.png             秩相关随观察窗变化
-    fig4_category_distribution.png     七类结案分布
-    fig5_excess_by_agency.png          各部门超额复发（两种零模型）
-    fig6_rho_per_category.png          逐类别相关系数
-    fig7_null_model_comparison.png     两种零模型对比
-    fig8_coverage_by_agency.png        各部门归类覆盖率
-"""
-
 import os
 import csv
 import matplotlib

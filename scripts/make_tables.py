@@ -1,18 +1,3 @@
-"""
-make_tables.py — 一次生成论文全部表格的 LaTeX 源码
-
-输入：out/ 目录下的 CSV
-输出：out/tables.tex —— 可直接 \\input 进 ACM 模板
-
-用法：
-    python make_tables.py
-
-说明：
-  · 表格用 booktabs 宏包（ACM 模板已内置），需 \\usepackage{booktabs}
-  · 宽表用 table* 环境跨栏
-  · 全部列名与表注为英文，可直接投稿
-"""
-
 import os
 import csv
 

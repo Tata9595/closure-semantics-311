@@ -1,21 +1,3 @@
-"""
-占位地址诊断：655 EAST 230 ST 的时间分布特征
-
-判断依据：
-  小时分布  集中在 20:00–02:00        → 真实噪音投诉
-            24 小时基本均匀            → 系统生成或批量落点
-            集中在某一两个整点         → 批量导入痕迹
-
-  月度分布  三年平稳、夏季略高         → 真实场所
-            某几个月暴增后消失         → 数据问题
-            从某月起突然常态化         → 系统变更导致落点漂移
-
-用法：
-    python check_addr.py                      # 默认查 655 EAST 230
-    python check_addr.py "661 EAST 230"       # 查别的地址
-    python check_addr.py "82-68 164" --type "Drug Activity"
-"""
-
 import argparse
 import duckdb
 
