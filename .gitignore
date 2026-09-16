@@ -1,0 +1,16 @@
+# 原始数据与中间产物不入库
+data/raw/
+out/
+*.duckdb
+*.duckdb.wal
+*.parquet
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 系统
+.DS_Store
+Thumbs.db
