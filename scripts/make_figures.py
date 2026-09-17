@@ -115,26 +115,47 @@ def fig2():
 
 # ═══════════ 图 3：秩相关随观察窗 ═══════════
 def fig3():
-    rows = load("K1_rho_strict_vs_wide_type.csv")
+    """秩相关随观察窗变化。优先读三口径明细，回退到两口径文件。"""
+    rows = load("L3_three_scopes_detail.csv")
+    if not rows:
+        rows = load("K1_rho_strict_vs_wide_type.csv")
     if not rows:
         return
+
     series = {}
     for r in rows:
-        if r["null_model"] != "poisson":
+        nm = (r.get("null_model") or "").strip().lower()
+        if nm not in ("poisson", "泊松"):
             continue
-        series.setdefault(r["nr_scope"], []).append(
-            (int(r["window_days"]), float(r["rho"])))
+        key = (r.get("nr_scope") or "").strip()
+        try:
+            series.setdefault(key, []).append(
+                (int(float(r["window_days"])), float(r["rho"])))
+        except (KeyError, ValueError):
+            continue
 
-    name = {"宽 B-G": "Wide (B–G)", "严格 B,C,E,F": "Strict (B,C,E,F)",
-            "中间 B-F": "Middle (B–F)"}
-    color = {"宽 B-G": ORANGE, "严格 B,C,E,F": BLUE, "中间 B-F": RED}
+    # 中英文键名都接受；顺序决定图例顺序
+    NAME = {"宽 B-G": "Wide (B–G)", "中间 B-F": "Middle (B–F)",
+            "窄 B,C,E,F": "Strict (B,C,E,F)", "严格 B,C,E,F": "Strict (B,C,E,F)"}
+    COLOR = {"宽 B-G": ORANGE, "中间 B-F": RED,
+             "窄 B,C,E,F": BLUE, "严格 B,C,E,F": BLUE}
+    ORDER = ["宽 B-G", "中间 B-F", "窄 B,C,E,F", "严格 B,C,E,F"]
 
     fig, ax = plt.subplots(figsize=(6.4, 4.2))
-    for k, pts in series.items():
-        pts.sort()
+    drawn = 0
+    for k in ORDER:
+        if k not in series:
+            continue
+        pts = sorted(series[k])
         ax.plot([p[0] for p in pts], [p[1] for p in pts],
                 marker="o", linewidth=1.8, markersize=6,
-                label=name.get(k, k), color=color.get(k, GRAY), zorder=3)
+                label=NAME.get(k, k), color=COLOR.get(k, GRAY), zorder=3)
+        drawn += 1
+    if not drawn:
+        print("  ⚠️ fig3: 未取到泊松零模型的数据，跳过")
+        plt.close(fig)
+        return
+
     ax.axhline(0, color=GRAY, linewidth=0.7, linestyle="--")
     ax.set_xlabel("Observation window $\\Delta$ (days)")
     ax.set_ylabel("Spearman $\\rho$")
