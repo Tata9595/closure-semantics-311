@@ -223,7 +223,7 @@ These are stated in the paper and repeated here so that anyone reusing the code 
 @inproceedings{closure-semantics-2026,
   author    = {Junjie Gu},
 
-&#x20; title     = {Which Kind of Non-Resolution Predicts Recurrence?
+  title     = {Which Kind of Non-Resolution Predicts Recurrence?
                Decomposing Closure Semantics in Large-Scale Urban Service Requests},
   booktitle = {Proceedings of the 10th International Conference on
                Computer Science and Artificial Intelligence (CSAI)},
