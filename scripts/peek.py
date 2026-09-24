@@ -17,12 +17,12 @@ def main():
     ap.add_argument("--top",  type=int, default=10)
     args = ap.parse_args()
 
-    pat = args.pattern.replace("'", "''")   # 转义单引号
+    pat = args.pattern.replace("'", "''")
 
     con = duckdb.connect("nyc311.duckdb")
     con.execute("PRAGMA memory_limit='6GB'")
 
-    # 关键：按 **完整文本** 分组，不按前缀
+
     rows = con.execute(f"""
         SELECT trim(resolution_description)          AS full_text,
                length(trim(resolution_description))  AS len,

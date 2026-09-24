@@ -5,11 +5,11 @@ import duckdb
 RAW        = "data/raw/*.parquet"
 OUT        = "out"
 LABEL_FILE = f"{OUT}/I1_templates_to_label.csv"
-PREFIX_LEN = 250          # 用结案说明前 N 字符作为模板标识
-                          # 120 太短：HPD 等部门的模板在 120 字符处尚未分叉，
-                          # were corrected(A) 与 still exist(B) 会混为一条，无法标注
-TARGET_COV = 95.0         # 待标注表覆盖到累计多少 %
-MIN_COVERAGE = 80.0       # 部门层面比较所需的最低归类覆盖率（%）
+PREFIX_LEN = 250
+
+
+TARGET_COV = 95.0
+MIN_COVERAGE = 80.0
 
 os.makedirs(OUT, exist_ok=True)
 
@@ -28,15 +28,8 @@ def show(con, title, sql, csv=None):
         con.execute(f"COPY ({sql}) TO '{OUT}/{csv}' (HEADER, DELIMITER ',')")
 
 
-# ══════════════════════════════════════════════════════
-# 关键词建议规则
-# 顺序重要：先判否定表述，再判肯定表述
-# 例如 "no violation" 含 "violation"，必须先匹配 B
-# ══════════════════════════════════════════════════════
 RULES = [
-    # (类别, 关键词列表) —— 自上而下首个命中者胜出
-    # 顺序至关重要：先判否定表述，再判肯定表述
-    # 例："didn't observe a violation" 含 "violation"，必须先匹配 B
+
 
     ("F", ["duplicate", "already reported", "same condition was reported"]),
 
@@ -76,21 +69,18 @@ RULES = [
 
 
 def suggest_expr(col: str) -> str:
-    """生成 SQL CASE 表达式，按 RULES 顺序给出建议类别"""
+
     parts = []
     for code, kws in RULES:
         conds = []
         for k in kws:
-            # SQL 字符串里的单引号需转义为两个单引号，否则 didn't 之类会截断语句
+
             safe = k.lower().replace("'", "''")
             conds.append(f"lower({col}) LIKE '%{safe}%'")
         parts.append(f"WHEN {' OR '.join(conds)} THEN '{code}'")
     return "CASE " + " ".join(parts) + " ELSE 'X' END"
 
 
-# ══════════════════════════════════════════════════════
-# ① 提取待标注模板
-# ══════════════════════════════════════════════════════
 def extract():
     con = connect()
     print("正在统计结案说明模板…")
@@ -116,8 +106,7 @@ def extract():
     FROM agg ORDER BY n DESC;
     """)
 
-    # ── 继承已有标注（前缀匹配）──
-    # PREFIX_LEN 改变后，旧标注仍可复用：新模板的开头就是旧模板
+
     inherited = False
     if os.path.exists(LABEL_FILE):
         src = normalize_csv(LABEL_FILE)
@@ -148,7 +137,6 @@ def extract():
                 ON left(t.tpl, o.len_old) = o.tpl_old
             ),
             best AS (SELECT tpl, tpl_old, code FROM m WHERE rk = 1),
-            -- 一条旧模板若对应多条新模板，说明加长前缀后分叉了，需人工复核
             split AS (
               SELECT tpl_old, count(*) AS n_new
               FROM best GROUP BY tpl_old
@@ -186,7 +174,7 @@ def extract():
     FROM templates GROUP BY 1 ORDER BY tickets DESC
     """, "I0_suggested_distribution.csv")
 
-    # 导出待标注表
+
     code_expr = ("COALESCE(i.code, '')" if inherited else "''")
     review_expr = ("COALESCE(i.needs_review, 0)" if inherited else "0")
     join_expr = ("LEFT JOIN inherit i ON i.tpl = t.tpl" if inherited else "")
@@ -225,10 +213,8 @@ def extract():
 
 
 def normalize_csv(path: str) -> str:
-    """
-    Excel 在中文 Windows 上另存 CSV 默认用 GBK，DuckDB 只吃 UTF-8。
-    这里自动探测编码并转存一份干净的 UTF-8 副本。
-    """
+
+
     raw = open(path, "rb").read()
     for enc in ("utf-8-sig", "utf-8", "gb18030", "cp1252", "latin-1"):
         try:
@@ -248,9 +234,6 @@ def normalize_csv(path: str) -> str:
     return clean
 
 
-# ══════════════════════════════════════════════════════
-# ② 应用标注 + 交叉验证
-# ══════════════════════════════════════════════════════
 def apply_labels():
     if not os.path.exists(LABEL_FILE):
         print(f"❌ 找不到 {LABEL_FILE}，请先运行 --extract 并完成标注")
@@ -273,7 +256,7 @@ def apply_labels():
         return
     print(f"已读入 {n_lab:,} 条标注")
 
-    # 标注合法性检查：只允许 A–G 与 X
+
     bad = con.execute("""
         SELECT code, count(*) AS n FROM label_map
         WHERE code NOT IN ('A','B','C','D','E','F','G','X')
@@ -290,7 +273,7 @@ def apply_labels():
     GROUP BY 1 ORDER BY templates DESC
     """)
 
-    # 把标注挂回工单
+
     con.execute(f"""
     CREATE OR REPLACE TABLE labeled AS
     SELECT r.unique_key::BIGINT AS unique_key,
@@ -328,7 +311,7 @@ def apply_labels():
     GROUP BY 1,2 ORDER BY tickets DESC
     """, "I3_category_distribution.csv")
 
-    # ── 关键诊断：按部门的归类覆盖率 ──
+
     print("\n" + "═" * 62)
     print("⚠️ 关键诊断：按部门的归类覆盖率")
     print("═" * 62)
@@ -369,7 +352,7 @@ def apply_labels():
     FROM labeled WHERE code <> 'X'
     """, "I4_nr_overall.csv")
 
-    # 敏感性：把 D、G 移出分子（§6.5 表 12）
+
     show(con, "类别边界敏感性：D、G 移出非解决型后", """
     SELECT round(100.0*avg(CASE WHEN code IN ('B','C','E','F')
                                 THEN 1.0 ELSE 0 END), 2) AS nr_pct_strict,
@@ -396,7 +379,7 @@ def apply_labels():
     ORDER BY nr_pct DESC LIMIT 25
     """, "I7_nr_by_type.csv")
 
-    # ── 交叉验证（the paper，图 3）──
+
     tables = [r[0] for r in con.execute("SHOW TABLES").fetchall()]
     if "excess" not in tables:
         print("\n⚠️ 库里没有 excess 表，请先运行 step3_diagnose.py，再重跑 --apply")
@@ -412,7 +395,6 @@ def apply_labels():
         con.execute(f"""
         CREATE OR REPLACE TABLE xv_{tag} AS
         WITH cov AS (
-          -- 只纳入归类覆盖率达标的分组，否则 nr 不可比
           SELECT {dim} AS dim
           FROM labeled GROUP BY 1
           HAVING avg(CASE WHEN code <> 'X' THEN 1.0 ELSE 0 END) >= {MIN_COVERAGE/100.0}
@@ -463,10 +445,8 @@ def apply_labels():
 
 
 def gaps():
-    """
-    列出被标为 X（或未标注）的模板，按工单量降序，并标出责任部门。
-    用于回补标注时决定优先级——补哪几条能最快把覆盖率拉上去。
-    """
+
+
     if not os.path.exists(LABEL_FILE):
         print(f"❌ 找不到 {LABEL_FILE}")
         return

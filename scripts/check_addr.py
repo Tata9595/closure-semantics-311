@@ -22,7 +22,7 @@ if n == 0:
     con.close()
     raise SystemExit
 
-# ── 小时分布 ──
+
 print("═" * 56)
 print("① 按小时分布")
 print("═" * 56)
@@ -40,7 +40,7 @@ night = sum(c for h, c in rows if h >= 20 or h <= 2)
 print(f"\n  夜间（20:00–02:00）占比：{100*night/n:.1f}%")
 print(f"  若接近 29%（7/24），说明分布均匀，不符合真实噪音投诉的作息特征")
 
-# ── 月度分布 ──
+
 print("\n" + "═" * 56)
 print("② 按月份分布")
 print("═" * 56)
@@ -54,7 +54,7 @@ for m, c in rows:
     bar = "█" * max(1, round(40 * c / mx))
     print(f"  {m}  {c:>8,}  {bar}")
 
-# ── 与该地址其他类型的对比 ──
+
 print("\n" + "═" * 56)
 print("③ 同一地址的其他工单类型")
 print("═" * 56)
@@ -66,7 +66,7 @@ con.sql(f"""
 print("↑ 若只有一个类型畸高、其余正常，更像该类型的专用落点；")
 print("  若多个类型都畸高，更像整体的地址默认值。")
 
-# ── 结案说明分布 ──
+
 print("═" * 56)
 print("④ 这批工单的结案说明")
 print("═" * 56)
@@ -82,7 +82,7 @@ con.sql(f"""
     GROUP BY 1 ORDER BY n DESC LIMIT 6
 """).show(max_rows=6)
 
-# ── 与全市同类型的小时分布对比 ──
+
 print("═" * 56)
 print("⑤ 小时分布：该地址 vs 全市同类型")
 print("═" * 56)
@@ -103,7 +103,7 @@ con.sql(f"""
     FROM here JOIN city USING (h) ORDER BY hour
 """).show(max_rows=24)
 
-# ── 与次高组的比值 ──
+
 print("═" * 56)
 print("⑤ 该组在全部「位置+类型」组中的位置")
 print("═" * 56)

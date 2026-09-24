@@ -40,11 +40,8 @@ def check_prereq():
     return True
 
 
-# ═════════════════════════════════════════════════
-# 构造 excess 表：泊松 / 经验（经验仅在 Δ=30 可用）
-# ═════════════════════════════════════════════════
 def make_excess(window, null_model):
-    """返回可供查询的 excess 表名"""
+
     name = f"ex6_{null_model}_{window}"
 
     if null_model == "poisson":
@@ -54,7 +51,7 @@ def make_excess(window, null_model):
                recurred - (1 - exp(-1.0*grp_n/{PERIOD_DAYS}*{window})) AS excess
         FROM rec_w{window};
         """)
-    else:  # empirical，仅 Δ=BASE_WINDOW 有时移表
+    else:
         con.execute(f"""
         CREATE OR REPLACE TABLE {name} AS
         WITH emp AS (
@@ -103,18 +100,17 @@ def spearman(exc_table, dim, nr_codes):
 
 
 def approx_p(rho, n):
-    """Spearman 的近似 p 值（大样本 t 近似），仅供参考"""
+
     if rho is None or n < 4 or abs(rho) >= 1:
         return None
     import math
     t = rho * math.sqrt((n - 2) / (1 - rho * rho))
-    # 双侧正态近似
+
     z = abs(t)
     p = math.erfc(z / math.sqrt(2))
     return round(p, 4)
 
 
-# ═════════════════════════════════════════════════
 def main():
     if not check_prereq():
         return
@@ -172,7 +168,7 @@ def main():
     FROM rho6 WHERE dim='类型' GROUP BY 1
     """, "K3_rho_summary.csv")
 
-    # ── ② 逐类别相关性 ──
+
     print("\n" + "═" * 66)
     print("② 逐类别相关性：哪些类别携带信号，哪些在稀释")
     print("═" * 66)
@@ -202,7 +198,7 @@ def main():
     print("\n↑ 正相关大的类别携带信号；接近零或负相关的类别是稀释源。")
     print("  这张表为「为何严格口径更强」提供直接证据，是the paper 的关键论据。")
 
-    # ── ③ 散点图数据 ──
+
     print("\n" + "═" * 66)
     print("③ 图 3 散点图数据（严格口径，Δ=30，泊松）")
     print("═" * 66)

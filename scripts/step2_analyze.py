@@ -4,7 +4,7 @@ import duckdb
 RAW         = "data/raw/*.parquet"
 WINDOW_DAYS = 30
 OUT         = "out"
-MEM_LIMIT   = "6GB"      # adjust to available RAM
+MEM_LIMIT   = "6GB"
 THREADS     = 4
 
 os.makedirs(OUT, exist_ok=True)
@@ -14,16 +14,13 @@ con.execute(f"PRAGMA threads={THREADS}")
 
 
 def show(title, sql, csv=None):
-    """Print a result table; also write it to CSV when a filename is given."""
+
     print(f"\n{title}")
     con.sql(sql).show(max_rows=40)
     if csv:
         con.execute(f"COPY ({sql}) TO '{OUT}/{csv}' (HEADER, DELIMITER ',')")
 
 
-# ═════════════════════════════════════════════
-# 1. Normalised base table
-# ═════════════════════════════════════════════
 print("Building the normalised table; the first run takes a few minutes...")
 con.execute(f"""
 CREATE OR REPLACE TABLE base AS
@@ -39,7 +36,6 @@ SELECT
     NULLIF(TRIM(bbl), '')                   AS bbl,
     TRY_CAST(latitude  AS DOUBLE)           AS lat,
     TRY_CAST(longitude AS DOUBLE)           AS lon,
-    -- Address normalisation: upper case, collapse whitespace, standardise suffixes
     NULLIF(
       regexp_replace(
         regexp_replace(
@@ -53,9 +49,7 @@ FROM read_parquet('{RAW}');
 n_total = con.execute("SELECT count(*) FROM base").fetchone()[0]
 print(f"Raw tickets: {n_total:,}")
 
-# ═════════════════════════════════════════════
-# 2. Completeness of the three candidate location fields
-# ═════════════════════════════════════════════
+
 print("\n" + "═" * 60)
 print("A. Location field completeness")
 print("═" * 60)
@@ -78,9 +72,7 @@ SELECT count(DISTINCT bbl)       AS uniq_bbl,
 FROM base
 """, "A2_unique_locations.csv")
 
-# ═════════════════════════════════════════════
-# 3. Analysis table with the location key
-# ═════════════════════════════════════════════
+
 con.execute("""
 CREATE OR REPLACE TABLE t AS
 SELECT *,
@@ -93,9 +85,7 @@ FROM base
 WHERE created_date IS NOT NULL AND complaint_type IS NOT NULL;
 """)
 
-# ═════════════════════════════════════════════
-# 4. Dataset overview
-# ═════════════════════════════════════════════
+
 print("\n" + "═" * 60)
 print("B. Dataset overview")
 print("═" * 60)
@@ -110,9 +100,7 @@ SELECT count(*)                                    AS tickets,
 FROM t
 """, "B1_overview.csv")
 
-# ═════════════════════════════════════════════
-# 5. Raw 30-day recurrence
-# ═════════════════════════════════════════════
+
 def recur_sql(loc, extra_group=""):
     g = f", c.{extra_group}" if extra_group else ""
     return f"""
@@ -150,9 +138,7 @@ SELECT count(*) AS closed_tickets, sum(recurred) AS recurred,
        round(100.0*avg(recurred), 2) AS recur_rate_pct FROM flagged
 """, "C2_recur_branchB.csv")
 
-# ═════════════════════════════════════════════
-# 6. Breakdown by responsible agency
-# ═════════════════════════════════════════════
+
 print("\n" + "═" * 60)
 print("D. Recurrence by agency (key A, groups of 5000+ tickets)")
 print("═" * 60)
@@ -175,9 +161,7 @@ FROM flagged GROUP BY complaint_type HAVING count(*) >= 5000
 ORDER BY recur_rate_pct DESC LIMIT 20
 """, "E1_by_type.csv")
 
-# ═════════════════════════════════════════════
-# 7. Diagnostics
-# ═════════════════════════════════════════════
+
 print("\n" + "═" * 60)
 print("F. Diagnostic: distribution of location-type group sizes")
 print("═" * 60)
@@ -194,7 +178,7 @@ FROM (SELECT loc_a, complaint_type, count(*) AS cnt
 print("If max_group reaches tens of thousands, an over-aggregated location")
 print("(a park, a transit hub, or a geocoding default) is inflating recurrence.")
 
-# Frequency of resolution descriptions, the input to step4_classify.py
+
 print("\n" + "═" * 60)
 print("G. Most frequent resolution descriptions (top 15)")
 print("═" * 60)

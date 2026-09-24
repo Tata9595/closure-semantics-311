@@ -6,7 +6,7 @@ import duckdb
 OUT         = "out"
 LABEL_FILE  = f"{OUT}/I1_templates_to_label.csv"
 SHEET_FILE  = f"{OUT}/L1_kappa_sheet.csv"
-SAMPLE_N    = 200          # 抽多少条给第二人标；模板不足则全取
+SAMPLE_N    = 200
 WINDOWS     = [7, 14, 30, 60, 90]
 SHIFTS      = [91, 182, 273, 365]
 BASE_WINDOW = 30
@@ -15,7 +15,7 @@ MIN_N       = 5000
 MIN_COVER   = 0.80
 
 WIDE   = "'B','C','D','E','F','G'"
-MID    = "'B','C','D','E','F'"      # 仅剔除 G
+MID    = "'B','C','D','E','F'"
 STRICT = "'B','C','E','F'"
 
 CODES = ["A", "B", "C", "D", "E", "F", "G", "X"]
@@ -38,7 +38,7 @@ def show(con, title, sql, csv=None):
 
 
 def normalize_csv(path):
-    """自动识别编码并转存 UTF-8 副本（Excel 在中文系统下默认存 GBK）"""
+
     raw = open(path, "rb").read()
     for enc in ("utf-8-sig", "utf-8", "gb18030", "cp1252", "latin-1"):
         try:
@@ -56,9 +56,6 @@ def normalize_csv(path):
     return clean
 
 
-# ═════════════════════════════════════════════
-# ① 中间口径
-# ═════════════════════════════════════════════
 def spearman(con, exc_table, dim, nr_codes):
     con.execute(f"""
     CREATE OR REPLACE TABLE xv7 AS
@@ -158,7 +155,7 @@ def run_mid():
     FROM rho7 ORDER BY nr_scope, null_model, window_days
     """, "L3_three_scopes_detail.csv")
 
-    # 三种口径各自的占比
+
     show(con, "三种口径的工单占比", """
     SELECT round(100.0*avg(CASE WHEN code IN ('B','C','D','E','F','G') THEN 1.0 ELSE 0 END),2) AS wide_pct,
            round(100.0*avg(CASE WHEN code IN ('B','C','D','E','F')     THEN 1.0 ELSE 0 END),2) AS mid_pct,
@@ -174,9 +171,6 @@ def run_mid():
     con.close()
 
 
-# ═════════════════════════════════════════════
-# ② 生成盲标表
-# ═════════════════════════════════════════════
 def run_sheet():
     if not os.path.exists(LABEL_FILE):
         print(f"❌ 找不到 {LABEL_FILE}")
@@ -194,7 +188,7 @@ def run_sheet():
     total = con.execute("SELECT count(*) FROM lbl").fetchone()[0]
     n = min(SAMPLE_N, total)
 
-    # 固定随机种子，保证可复现
+
     con.execute("SELECT setseed(0.42)")
     con.execute(f"""
     COPY (
@@ -224,9 +218,6 @@ def run_sheet():
     con.close()
 
 
-# ═════════════════════════════════════════════
-# ③ 计算一致率与 Cohen's kappa
-# ═════════════════════════════════════════════
 def run_kappa():
     if not os.path.exists(SHEET_FILE):
         print(f"❌ 找不到 {SHEET_FILE}，请先运行 --sheet")
@@ -253,11 +244,11 @@ def run_kappa():
         return
     print(f"已配对 {n} 条双人标注\n")
 
-    # 观察一致率
+
     po = con.execute(
         "SELECT avg(CASE WHEN c1=c2 THEN 1.0 ELSE 0 END) FROM pair").fetchone()[0]
 
-    # 期望一致率：两位标注者各自的类别边际分布之积求和
+
     pe = 0.0
     marg = {}
     for c in CODES:
@@ -268,7 +259,7 @@ def run_kappa():
 
     kappa = (po - pe) / (1 - pe) if pe < 1 else float("nan")
 
-    # 按工单量加权的一致率（辅助指标）
+
     pw = con.execute("""
       SELECT sum(CASE WHEN c1=c2 THEN tickets ELSE 0 END)*1.0/sum(tickets) FROM pair
     """).fetchone()[0]

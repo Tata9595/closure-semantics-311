@@ -12,9 +12,7 @@ PERIOD_DAYS = 1096
 MIN_N       = 5000
 MIN_COVER   = 0.80
 
-# ── 占位地址排除规则 ──
-# 经 §4.2.4 的四项证据判定为地理编码默认落点的「地址前缀 + 类型」组合。
-# 这些工单本身是真实的，但其位置字段不可用于基于位置的分析，故排除。
+
 EXCLUDE_RULES = [
     ("655 EAST 230", "Noise - Residential"),
 ]
@@ -41,9 +39,6 @@ def show(con, title, sql, csv=None):
         con.execute(f"COPY ({sql}) TO '{OUT}/{csv}' (HEADER, DELIMITER ',')")
 
 
-# ═══════════════════════════════════════════════
-# ① 占位地址：诊断 → 规则 → 前后对比
-# ═══════════════════════════════════════════════
 def run_placeholder():
     con = connect()
 
@@ -72,7 +67,7 @@ def run_placeholder():
     print("   · PLUTO 地块数据        含每地块的建筑面积与住宅单元数")
     print("\n   判据：普通住宅楼日均投诉超过 10 条即不合常理；超过 100 条几乎必为占位值。")
 
-    # 同一地址跨类型的总量 —— 占位地址通常在多个类型上都异常
+
     show(con, "按地址汇总（跨类型），前 15", f"""
     SELECT any_value(addr_norm) AS address, any_value(bbl) AS bbl,
            any_value(borough)   AS borough,
@@ -214,9 +209,6 @@ def spearman(con, exc_table, dim, nr_codes):
     return n, rho
 
 
-# ═══════════════════════════════════════════════
-# ② 散点图
-# ═══════════════════════════════════════════════
 def run_scatter():
     con = connect()
     tabs = {r[0] for r in con.execute("SHOW TABLES").fetchall()}
@@ -243,7 +235,7 @@ def run_scatter():
         data[tag] = (scope, n, rho, rows)
         print(f"  {scope:<12}  n={n}  ρ={rho}   → out/M6_scatter_{tag}.csv")
 
-    # 合并成一张长表，方便 Excel 一次画
+
     con.execute(f"""
     COPY (
       SELECT '宽' AS scope, * FROM read_csv('{OUT}/M6_scatter_wide.csv', header=true)
@@ -253,7 +245,7 @@ def run_scatter():
     """)
     print(f"\n合并表：out/M7_scatter_all.csv")
 
-    # 尝试直接出图
+
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -271,7 +263,7 @@ def run_scatter():
         xs = [r[1] for r in rows]
         ys = [r[2] for r in rows]
         ax.scatter(xs, ys, s=28, alpha=0.65, edgecolors="none")
-        # 拟合线
+
         if len(xs) > 2:
             mx = sum(xs)/len(xs); my = sum(ys)/len(ys)
             den = sum((x-mx)**2 for x in xs)
@@ -295,16 +287,9 @@ def run_scatter():
     con.close()
 
 
-# ═══════════════════════════════════════════════
-# ③ 按部门列出未归类模板（辅助补标）
-# ═══════════════════════════════════════════════
 def run_gaps2():
-    """
-    按部门列出未归类模板，并计算：
-      · 该部门当前覆盖率、距 80% 门槛还差多少张
-      · 每条模板补标后能把该部门覆盖率推到多少（累计）
-      · 该模板是否已在标注表中（决定是"填 code"还是"需重新 extract"）
-    """
+
+
     if not os.path.exists(LABEL_FILE):
         print(f"❌ 找不到 {LABEL_FILE}")
         return
@@ -318,7 +303,7 @@ def run_gaps2():
     open(clean, "w", encoding="utf-8", newline="").write(text)
 
     con = connect()
-    # 标注表全量（含已填与未填），用于判断模板在不在表里
+
     con.execute(f"""
     CREATE OR REPLACE TABLE lm8 AS
     SELECT template,
@@ -326,7 +311,7 @@ def run_gaps2():
     FROM read_csv('{clean}', header=true, all_varchar=true, ignore_errors=true);
     """)
 
-    # 每个部门的现状
+
     con.execute(f"""
     CREATE OR REPLACE TABLE ag_stat AS
     SELECT r.agency,
@@ -352,7 +337,7 @@ def run_gaps2():
 
     print("\n↑ tickets_needed = 还需补标多少张工单才能达到 80% 门槛。")
 
-    # 逐部门的待补模板
+
     targets = [r[0] for r in con.execute("""
         SELECT agency FROM ag_stat
         WHERE 1.0*classified/closed_with_text < 0.80

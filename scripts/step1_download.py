@@ -6,19 +6,18 @@ import datetime as dt
 import requests
 import polars as pl
 
-# ─────────────── 配置 ───────────────
-# App Token：从环境变量读取，避免提交到公开仓库
+
 APP_TOKEN = os.environ.get("NYC_APP_TOKEN", "")
 
 START_DATE = dt.date(2023, 1, 1)
-END_DATE   = dt.date(2026, 1, 1)      # 不含，即取到 2025-12-31
+END_DATE   = dt.date(2026, 1, 1)
 
 OUT_DIR    = "data/raw"
-CHUNK_DAYS = 1        # 每请求覆盖几天。1 最稳；日均量小的话可调到 2–3 提速
-ROW_LIMIT  = 50000    # 单请求上限。返回行数触顶会自动二分细分窗口
+CHUNK_DAYS = 1
+ROW_LIMIT  = 50000
 TIMEOUT    = 120
 MAX_RETRY  = 5
-SLEEP      = 0.2      # 请求间隔，避免触发限流
+SLEEP      = 0.2
 
 DATASET = "erm2-nwe9"
 V2_URL  = f"https://data.cityofnewyork.us/resource/{DATASET}.csv"
@@ -35,7 +34,6 @@ USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 )
-# ────────────────────────────────────
 
 
 def headers():
@@ -61,14 +59,13 @@ def ts(d: dt.date) -> str:
     return d.strftime("%Y-%m-%dT00:00:00.000")
 
 
-# ═══════════════ 单窗口请求（无 $order / 无 $offset） ═══════════════
 def fetch_window(lo: dt.date, hi: dt.date, timeout=TIMEOUT, verbose=False):
-    """取 [lo, hi) 区间的全部工单。窗口足够小则一次取完。"""
+
     params = {
         "$select": ",".join(FIELDS),
         "$where": f"created_date >= '{ts(lo)}' AND created_date < '{ts(hi)}'",
         "$limit": ROW_LIMIT,
-        # 刻意不加 $order 和 $offset —— 见文件头说明
+
     }
 
     last_err = None
@@ -90,10 +87,8 @@ def fetch_window(lo: dt.date, hi: dt.date, timeout=TIMEOUT, verbose=False):
 
 
 def fetch_window_safe(lo: dt.date, hi: dt.date, depth=0):
-    """
-    取 [lo, hi)。若返回行数触顶（说明被截断），把窗口二分后递归重取，
-    保证不会静默丢数据。
-    """
+
+
     df = fetch_window(lo, hi)
 
     if df.height >= ROW_LIMIT:
@@ -110,7 +105,6 @@ def fetch_window_safe(lo: dt.date, hi: dt.date, depth=0):
     return df
 
 
-# ═══════════════ 自检 ═══════════════
 def probe():
     show_env()
     print("\n自检：取 2024-01-01 单日数据\n" + "=" * 60)
@@ -142,7 +136,6 @@ def probe():
     print(f"\n预计全量下载耗时：约 {est:.0f} 分钟")
 
 
-# ═══════════════ 速度测试 ═══════════════
 def speed():
     show_env()
     sel = ",".join(FIELDS)
@@ -168,9 +161,8 @@ def speed():
     print("\n① 应远快于 ②。若 ③ 也快，可把 CHUNK_DAYS 调到 3 提速三倍。")
 
 
-# ═══════════════ 正式下载 ═══════════════
 def month_bounds(d: dt.date):
-    """返回 d 所在月的 [首日, 次月首日)"""
+
     first = d.replace(day=1)
     nxt = dt.date(first.year + 1, 1, 1) if first.month == 12 \
         else dt.date(first.year, first.month + 1, 1)

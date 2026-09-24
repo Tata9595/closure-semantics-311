@@ -7,12 +7,12 @@ OUT         = "out"
 MEM_LIMIT   = "6GB"
 THREADS     = 4
 
-WINDOWS     = [7, 14, 30, 60, 90]     # 观察窗扫描
-BASE_WINDOW = 30                      # 主设定
-SHIFTS      = [91, 182, 273, 365]     # 经验零模型的循环平移量（天）
-PERIOD_DAYS = 1096                    # 2023-01-01 ~ 2025-12-31
-MIN_N       = 5000                    # 分组最小工单数
-MIN_COVER   = 0.80                    # 分组最小归类覆盖率
+WINDOWS     = [7, 14, 30, 60, 90]
+BASE_WINDOW = 30
+SHIFTS      = [91, 182, 273, 365]
+PERIOD_DAYS = 1096
+MIN_N       = 5000
+MIN_COVER   = 0.80
 
 os.makedirs(OUT, exist_ok=True)
 con = duckdb.connect("nyc311.duckdb")
@@ -37,14 +37,9 @@ def check_prereq():
     return True
 
 
-# ═════════════════════════════════════════════════
-# 复发计算：可指定观察窗、位置列、结案时间表达式
-# ═════════════════════════════════════════════════
 def build_recurrence(tag, window, loc, close_expr="c.closed_date"):
-    """
-    生成一张 rec_<tag> 表：unique_key, agency, complaint_type, loc, grp_n, recurred
-    close_expr 可换成时移后的表达式，用于经验零模型
-    """
+
+
     t0 = time.time()
     con.execute(f"""
     CREATE OR REPLACE TABLE rec_{tag} AS
@@ -77,7 +72,7 @@ def build_recurrence(tag, window, loc, close_expr="c.closed_date"):
 
 
 def shifted_close(k):
-    """循环时移 k 天的结案时间表达式"""
+
     return (f"(CASE WHEN c.closed_date + INTERVAL {k} DAY "
             f"          >= TIMESTAMP '2026-01-01' "
             f"     THEN c.closed_date + INTERVAL {k} DAY "
@@ -85,9 +80,6 @@ def shifted_close(k):
             f"     ELSE c.closed_date + INTERVAL {k} DAY END)")
 
 
-# ═════════════════════════════════════════════════
-# 把某张 rec 表转成带超额的 excess 表（泊松零模型）
-# ═════════════════════════════════════════════════
 def add_poisson_excess(tag, window):
     con.execute(f"""
     CREATE OR REPLACE TABLE exc_{tag} AS
@@ -98,14 +90,9 @@ def add_poisson_excess(tag, window):
     """)
 
 
-# ═════════════════════════════════════════════════
-# 在给定 excess 表与 NR 口径下计算 ρ
-# ═════════════════════════════════════════════════
 def spearman(exc_table, dim, nr_codes, label):
-    """
-    nr_codes: 计入非解决型的类别集合，如 "'B','C','D','E','F','G'"
-    返回 (n, rho)
-    """
+
+
     con.execute(f"""
     CREATE OR REPLACE TABLE xv_tmp AS
     WITH cov AS (
@@ -138,15 +125,14 @@ def spearman(exc_table, dim, nr_codes, label):
     return n, rho
 
 
-# ═════════════════════════════════════════════════
 def main(quick=False):
     if not check_prereq():
         return
 
-    results = []          # 汇总表 12 的行
+    results = []
     t_start = time.time()
 
-    # ── ① 观察窗扫描（泊松零模型，地块编号方案）──
+
     print("\n" + "═" * 64)
     print("① 观察窗扫描  Δ = 7/14/30/60/90 天")
     print("═" * 64)
@@ -187,7 +173,7 @@ def main(quick=False):
         finish(results, t_start)
         return
 
-    # ── ② 位置粒度对照 ──
+
     print("\n" + "═" * 64)
     print("② 位置粒度对照：地块编号 vs 100 米网格")
     print("═" * 64)
@@ -214,7 +200,7 @@ def main(quick=False):
                         "网格", n, rho))
         print(f"  ρ({dname}, n={n}) = {rho}")
 
-    # ── ③ 经验零模型（循环时移）──
+
     print("\n" + "═" * 64)
     print("③ 零模型对照：泊松 vs 经验（循环时移）")
     print("═" * 64)
@@ -224,7 +210,7 @@ def main(quick=False):
         print(f"\n  平移 {k} 天")
         build_recurrence(f"s{k}", BASE_WINDOW, "loc_a", shifted_close(k))
 
-    # 经验期望 = 各平移版本复发率的平均
+
     con.execute(f"""
     CREATE OR REPLACE TABLE exc_emp AS
     WITH shifted AS (
@@ -265,7 +251,7 @@ def main(quick=False):
                         "地块编号", n, rho))
         print(f"  ρ({dname}, n={n}) = {rho}")
 
-    # ── ④ 类别边界对照 ──
+
     print("\n" + "═" * 64)
     print("④ 类别边界对照：D、G 移出非解决型")
     print("═" * 64)
@@ -288,7 +274,7 @@ def main(quick=False):
 
 
 def finish(results, t_start):
-    # ── ⑤ 汇总表 12 ──
+
     con.execute("DROP TABLE IF EXISTS rho_table")
     con.execute("""
     CREATE TABLE rho_table(

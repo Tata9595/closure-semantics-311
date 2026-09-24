@@ -22,7 +22,7 @@ BLUE, RED, GRAY, ORANGE = "#2c6fbb", "#c0392b", "#7f8c8d", "#e08214"
 
 
 def load(name):
-    """读 CSV，自动处理编码；文件不存在则返回 None"""
+
     path = os.path.join(IN, name)
     if not os.path.exists(path):
         print(f"  ⚠️ 缺少 {name}，跳过相关图")
@@ -44,12 +44,11 @@ def save(fig, name):
     print(f"  ✅ {path}")
 
 
-# ═══════════ 图 1：复发率 vs 组大小 ═══════════
 def fig1():
     rows = load("H2_by_group_size.csv")
     if not rows:
         return
-    # 用各区间的几何中点作为横轴位置
+
     mid = {"1": 1, "2-3": 2.4, "4-10": 6.3, "11-50": 23,
            "51-200": 101, "201-1000": 448, "1000+": 2000}
     xs, ys, labs, share = [], [], [], []
@@ -74,7 +73,6 @@ def fig1():
     save(fig, "fig1_recurrence_vs_groupsize.png")
 
 
-# ═══════════ 图 2：三种口径散点 ═══════════
 def fig2():
     panels = [("K6_scatter_wide_type.csv", "Wide (B–G)", 0.122),
               ("K5_scatter_strict_type.csv", "Strict (B,C,E,F)", 0.331)]
@@ -113,9 +111,8 @@ def fig2():
     save(fig, "fig2_scatter_scopes.png")
 
 
-# ═══════════ 图 3：秩相关随观察窗 ═══════════
 def fig3():
-    """秩相关随观察窗变化。优先读三口径明细，回退到两口径文件。"""
+
     rows = load("L3_three_scopes_detail.csv")
     if not rows:
         rows = load("K1_rho_strict_vs_wide_type.csv")
@@ -134,7 +131,7 @@ def fig3():
         except (KeyError, ValueError):
             continue
 
-    # 中英文键名都接受；顺序决定图例顺序
+
     NAME = {"宽 B-G": "Wide (B–G)", "中间 B-F": "Middle (B–F)",
             "窄 B,C,E,F": "Strict (B,C,E,F)", "严格 B,C,E,F": "Strict (B,C,E,F)"}
     COLOR = {"宽 B-G": ORANGE, "中间 B-F": RED,
@@ -166,7 +163,6 @@ def fig3():
     save(fig, "fig3_rho_by_window.png")
 
 
-# ═══════════ 图 4：七类结案分布 ═══════════
 def fig4():
     rows = load("I3_category_distribution.csv")
     if not rows:
@@ -192,7 +188,6 @@ def fig4():
     save(fig, "fig4_category_distribution.png")
 
 
-# ═══════════ 图 5：各部门超额复发（两种零模型） ═══════════
 def fig5():
     rows = load("J4_null_model_by_agency.csv")
     if not rows:
@@ -220,7 +215,6 @@ def fig5():
     save(fig, "fig5_excess_by_agency.png")
 
 
-# ═══════════ 图 6：逐类别相关系数 ═══════════
 def fig6():
     rows = load("K4_rho_per_category.csv")
     if not rows:
@@ -252,7 +246,6 @@ def fig6():
     save(fig, "fig6_rho_per_category.png")
 
 
-# ═══════════ 图 7：两种零模型对比 ═══════════
 def fig7():
     rows = load("J3_null_model_overall.csv")
     if not rows:
@@ -291,7 +284,6 @@ def fig7():
     save(fig, "fig7_null_model_comparison.png")
 
 
-# ═══════════ 图 8：各部门归类覆盖率 ═══════════
 def fig8():
     rows = load("I2b_coverage_by_agency.csv")
     if not rows:

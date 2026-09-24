@@ -44,7 +44,7 @@ EN_CAT = {"A": "Substantive action", "B": "No evidence found",
 
 blocks = []
 
-# ───── T1 结案语义分布 ─────
+
 r = load("I3_category_distribution.csv")
 if r:
     rows = [[c["code"], EN_CAT.get(c["code"], ""),
@@ -61,7 +61,7 @@ if r:
         note="Classified via 164 templates after two-rater adjudication "
              "(Cohen's $\\kappa$ = 0.766 before adjudication)."))
 
-# ───── T2 部门覆盖率 ─────
+
 r = load("I2b_coverage_by_agency.csv")
 if r:
     r = [x for x in r if int(x["closed_with_text"]) >= 1000]
@@ -77,7 +77,7 @@ if r:
         note="Agencies below the 80\\% threshold are excluded from "
              "agency-level comparison; type-level analysis is unaffected."))
 
-# ───── T3 复发率 vs 组大小 ─────
+
 r = load("H2_by_group_size.csv")
 if r:
     rows = [[esc(x["group_size"]), f"{int(x['tickets']):,}",
@@ -91,7 +91,7 @@ if r:
         note="The near-perfect monotone relationship shows that unadjusted "
              "recurrence measures location density, not handling quality."))
 
-# ───── T4 截断后的复发率 ─────
+
 r = load("H7_capped.csv")
 if r:
     rows = [[esc(x["cap"]), f"{int(x['tickets']):,}",
@@ -101,7 +101,7 @@ if r:
         "Recurrence rate after capping group size.",
         ["Cap", "Tickets", "Recurrence (\\%)"], rows, "lrr"))
 
-# ───── T5 两种零模型总体 ─────
+
 r = load("J3_null_model_overall.csv")
 if r:
     x = r[0]
@@ -120,7 +120,7 @@ if r:
              "overestimates expected recurrence for bursty complaint streams, "
              "understating excess by a factor of 3.9."))
 
-# ───── T6 部门超额（两种零模型） ─────
+
 r = load("J4_null_model_by_agency.csv")
 if r:
     r.sort(key=lambda x: -float(x["excess_empirical"]))
@@ -137,7 +137,7 @@ if r:
         note="Rank correlation between the two excess columns is about 0.55; "
              "agency ordering is therefore null-model dependent."))
 
-# ───── T7 超额最高的类型 ─────
+
 r = load("H5_excess_by_type_top.csv")
 if r:
     rows = [[esc(x["complaint_type"]), esc(x["agency"]),
@@ -153,7 +153,7 @@ if r:
         note="Presented as a descriptive finding; it does not by itself "
              "establish a mechanism."))
 
-# ───── T8 三种口径的 ρ ─────
+
 r = load("K1_rho_strict_vs_wide_type.csv")
 if r:
     from collections import defaultdict
@@ -171,7 +171,7 @@ if r:
         rows.append([nm, dfn, share, f"{prim.get(k, 0):.3f}",
                      f"{sum(v)/len(v):.3f}",
                      f"{min(v):.3f}--{max(v):.3f}"])
-    # 中间口径来自 L2
+
     l2 = load("L2_three_scopes_summary.csv")
     if l2:
         for x in l2:
@@ -191,7 +191,7 @@ if r:
              "Six settings: five windows (7/14/30/60/90 days, Poisson) "
              "plus the empirical null at 30 days."))
 
-# ───── T9 逐类别 ρ ─────
+
 r = load("K4_rho_per_category.csv")
 if r:
     r.sort(key=lambda x: -float(x["rho"]))
@@ -211,7 +211,7 @@ if r:
              "correction across seven tests, only category C remains "
              "robustly significant."))
 
-# ───── T10 位置粒度 ─────
+
 r = load("J2_location_granularity.csv")
 if r:
     en = {"地块编号优先": "Tax lot (BBL) first", "100 米网格": "100\\,m grid"}
@@ -228,7 +228,7 @@ if r:
              "reconfirming that raw recurrence is driven by aggregation "
              "granularity."))
 
-# ───── T11 边界敏感性 ─────
+
 r = load("I5_boundary_sensitivity.csv")
 if r:
     x = r[0]
@@ -239,7 +239,7 @@ if r:
         "Sensitivity of the non-resolution share to category boundaries.",
         ["Definition", "Non-resolution share (\\%)"], rows, "lr"))
 
-# ───── 写出 ─────
+
 os.makedirs(IN, exist_ok=True)
 with open(OUT, "w", encoding="utf-8") as f:
     f.write("% ══════════════════════════════════════════════\n")
