@@ -2,9 +2,6 @@
 
 Replication package for:
 
-> \\\*\\\*Which Kind of Non-Resolution Predicts Recurrence? Decomposing Closure Semantics in Large-Scale Urban Service Requests\\\*\\\*
-> CSAI 2026, Beijing.
-
 This repository contains the complete pipeline — data acquisition, annotation, analysis, robustness checks, and figure/table generation — for a study of 10,336,532 New York City 311 service requests filed between 2023 and 2025.
 
 \---
